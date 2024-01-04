@@ -1,15 +1,14 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const repaymentSchema = new mongoose.Schema({
   schedule: {
-    type: date,
+    type: Date,
     required: true,
   },
   status: {
     type: String,
-    default: 'pending',
+    default: "Unpaid",
   },
-  // Add more fields as needed for the repayment schedule
 });
 
 const loanSchema = new mongoose.Schema({
@@ -27,11 +26,11 @@ const loanSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    default: 'pending',
+    default: "pending",
   },
-  repaymentType: [repaymentSchema], // Array of repayment schedules
+  repayment: [repaymentSchema],
 });
 
-const Loan = mongoose.model('Loan', loanSchema);
+const Loan = mongoose.model("Loan", loanSchema);
 
 module.exports = Loan;

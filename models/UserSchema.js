@@ -25,12 +25,11 @@ const userSchema = new mongoose.Schema({
   loans: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Loan', // Reference to the Loan model
+      ref: 'Loan',
     },
   ],
 });
 
-// Create User model from the schema
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;

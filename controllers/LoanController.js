@@ -1,87 +1,102 @@
-const express = require('express');
-const router = express.Router();
-const Loan = require('../models/LoanSchema'); // Assuming your Loan model is in a 'models' directory
+const Loan = require("../models/LoanSchema");
+const User = require("../models/UserSchema");
 
-// Get all loans
-router.get('/', async (req, res) => {
+const getAllLoans = async (req, res) => {
   try {
     const loans = await Loan.find();
-    res.json(loans);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(200).json(loans);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
   }
-});
+};
 
-// Create a new loan
-router.post('/', async (req, res) => {
-  const loan = new Loan({
-    amount: req.body.amount,
-    term: req.body.term,
-    loanStartDate: req.body.loanStartDate || Date.now(),
-    status: req.body.status || 'pending',
-    repaymentType: req.body.repaymentType || [],
-  });
+const createLoan = async (req, res) => {
+  const repay = [];
+  let startDate = new Date(Number(req.body.loanStartDate));
+
+  for (let i = 0; i < req.body.loanTerm; i++) {
+    startDate.setDate(startDate.getDate() + 7);
+    repay.push({ schedule: startDate, status: "Unpaid" });
+  }
 
   try {
+    const loan = new Loan({
+      amount: req.body.loanAmount,
+      term: req.body.loanTerm,
+      loanStartDate: req.body.loanStartDate,
+      status: "pending",
+      repayment: [...repay],
+    });
+
     const newLoan = await loan.save();
+
+    const user = await User.findByIdAndUpdate(
+      req.body.userId,
+      { $push: { loans: newLoan._id } },
+      { new: true }
+    );
+
     res.status(201).json(newLoan);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-});
+};
 
-// Get a single loan by ID
-router.get('/:id', getLoan, (req, res) => {
-  res.json(res.loan);
-});
-
-// Update a loan
-router.patch('/:id', getLoan, async (req, res) => {
-  if (req.body.amount != null) {
-    res.loan.amount = req.body.amount;
-  }
-  if (req.body.term != null) {
-    res.loan.term = req.body.term;
-  }
-  if (req.body.status != null) {
-    res.loan.status = req.body.status;
-  }
-  if (req.body.repaymentType != null) {
-    res.loan.repaymentType = req.body.repaymentType;
-  }
-
+const getLoanById = async (req, res) => {
+  const { loanId } = req.params;
   try {
-    const updatedLoan = await res.loan.save();
-    res.json(updatedLoan);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
+    const loan = await Loan.findById(loanId);
 
-// Delete a loan
-router.delete('/:id', getLoan, async (req, res) => {
-  try {
-    await res.loan.remove();
-    res.json({ message: 'Loan deleted' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Middleware function to get a loan by ID
-async function getLoan(req, res, next) {
-  let loan;
-  try {
-    loan = await Loan.findById(req.params.id);
-    if (loan == null) {
-      return res.status(404).json({ message: 'Loan not found' });
+    if (!loan) {
+      return res.status(404).json({ message: "Loan not found" });
     }
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
+
+    res.status(200).json(loan);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
   }
+};
 
-  res.loan = loan;
-  next();
-}
+const updateLoan = async (req, res) => {
+  const { loanId, repaymentId, type } = req.body;
 
-module.exports = router;
+  try {
+    let updatedEntity;
+
+    if (type === "user") {
+      updatedEntity = await Loan.findOneAndUpdate(
+        {
+          _id: loanId,
+          "repayment._id": repaymentId,
+        },
+        {
+          $set: {
+            "repayment.$.status": "Paid",
+          },
+        },
+        { new: true }
+      );
+    } else {
+      updatedEntity = await Loan.findOneAndUpdate(
+        { _id: loanId },
+        { $set: { status: req.body.status } },
+        { new: true }
+      );
+    }
+
+    if (!updatedEntity) {
+      return res.status(404).json({ message: "Loan or Repayment not found" });
+    }
+
+    res.status(200).json(updatedEntity);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+module.exports = {
+  getAllLoans,
+  createLoan,
+  getLoanById,
+  updateLoan,
+};

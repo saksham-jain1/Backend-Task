@@ -1,29 +1,24 @@
-const express = require('express');
+const express = require("express");
+const dotenv = require("dotenv");
+const connectDB = require("./config/connection");
+
+
 const app = express();
-const PORT = 4000;
-const express = require('express');
+const port = process.env.PORT || 5000;
 
-const loanRoutes = require('./routes/loanRouter'); // Adjust the path accordingly
-app.use('/loans', loanRoutes);
+dotenv.config();
+connectDB();
 
-const userRoutes = require('./routes/userRouter'); // Adjust the path accordingly
-app.use('/users', userRoutes);
+app.use(express.json());
 
-// Import the MongoDB connection
-require('./db');
+const loanRoutes = require("./routes/loanRouter");
+const userRoutes = require("./routes/userRouter");
 
-// Example GET endpoint
-app.get('/', (req, res) => {
-  res.send('Welcome to my Node.js backend!');
+app.use("/api/loan", loanRoutes);
+app.use("/api/user", userRoutes);
+
+app.listen(port, () => {
+  console.log("Connected Successfully");
 });
 
-// Example POST endpoint
-app.post('/api/data', (req, res) => {
-  // Handle POST request
-  res.json({ message: 'Received POST request!' });
-});
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+module.exports = app;
